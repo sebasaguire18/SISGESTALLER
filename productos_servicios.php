@@ -64,7 +64,7 @@ while ($row = mysqli_fetch_assoc($result)) {
         }
     </style>
 </head>
-<body class="min-h-screen flex flex-col justify-between">
+<body class="min-h-screen flex flex-col justify-between" x-data="{ search:'' }">
     <header class="p-4 pt-8">
         <div class="w-full max-w-5xl mx-auto">
             <div class="flex flex-col md:flex-row justify-between w-full items-start md:items-center gap-4">
@@ -116,6 +116,9 @@ while ($row = mysqli_fetch_assoc($result)) {
 
         <section class="bg-white p-4 rounded-lg shadow-sm">
             <h2 class="font-semibold text-lg mb-3">Listado</h2>
+            <div class="mb-4">
+                <input x-model="search" type="text" placeholder="Buscar por ID, nombre o referencia..." class="w-full p-2 border rounded-sm">
+            </div>
             <?php if (count($items)): ?>
                 <div class="overflow-x-auto">
                     <table class="w-full text-sm">
@@ -132,12 +135,14 @@ while ($row = mysqli_fetch_assoc($result)) {
                         </thead>
                         <tbody class="divide-y">
                             <?php foreach ($items as $item): ?>
-                                <tr>
+                                <tr x-show="!search || '<?php echo htmlspecialchars(strtolower($item['id'])); ?>'.includes(search.toLowerCase()) || '<?php echo htmlspecialchars(strtolower($item['nombre'])); ?>'.includes(search.toLowerCase()) || '<?php echo htmlspecialchars(strtolower($item['referencia_bodega'])); ?>'.includes(search.toLowerCase())">
                                     <td class="p-2 border break-all"><?php echo htmlspecialchars($item['id']); ?></td>
-                                    <td class="p-2 border"><?php echo htmlspecialchars($item['nombre']); ?></td>
+                                    <td class="p-2 border cursor-pointer hover:bg-blue-50" onclick="editarNombre('<?php echo htmlspecialchars($item['id']); ?>', '<?php echo htmlspecialchars($item['nombre']); ?>')" title="Clic para editar"><?php echo htmlspecialchars($item['nombre']); ?></td>
                                     <td class="p-2 border font-semibold"><?php echo htmlspecialchars($item['referencia_bodega']); ?></td>
                                     <td class="p-2 border"><?php echo htmlspecialchars($item['tipo']); ?></td>
-                                    <td class="p-2 border"><?php echo $item['precio'] !== null ? number_format($item['precio'], 2) : '-'; ?></td>
+                                    <td class="p-2 border text-right cursor-pointer hover:bg-blue-50" onclick="editarPrecio('<?php echo htmlspecialchars($item['id']); ?>', <?php echo $item['precio'] !== null ? $item['precio'] : 'null'; ?>)" title="Clic para editar">
+                                        <?php echo $item['precio'] !== null ? number_format($item['precio'], 2) : '<span class="text-gray-400">-</span>'; ?>
+                                    </td>
                                     <td class="p-2 border"><?php echo htmlspecialchars($item['descripcion']); ?></td>
                                     <td class="p-2 border"><?php echo htmlspecialchars($item['created_at']); ?></td>
                                 </tr>
@@ -166,6 +171,50 @@ while ($row = mysqli_fetch_assoc($result)) {
     </footer>
 
     <script>
+        function editarNombre(itemId, currentName) {
+            const newName = prompt('Ingresa el nuevo nombre:', currentName);
+            if (newName === null || newName.trim() === '') return;
+            
+            const data = new FormData();
+            data.append('id', itemId);
+            data.append('nombre', newName.trim());
+            
+            fetch('php/controllers/actualizar_producto_servicio.php', {
+                method: 'POST',
+                body: data
+            })
+            .then(response => response.json())
+            .then(result => {
+                alert(result.message);
+                if (result.success) {
+                    window.location.reload();
+                }
+            })
+            .catch(error => alert('Error: ' + error));
+        }
+
+        function editarPrecio(itemId, currentPrice) {
+            const newPrice = prompt('Ingresa el nuevo precio:', currentPrice || '');
+            if (newPrice === null) return;
+            
+            const data = new FormData();
+            data.append('id', itemId);
+            data.append('precio', newPrice);
+            
+            fetch('php/controllers/actualizar_producto_servicio.php', {
+                method: 'POST',
+                body: data
+            })
+            .then(response => response.json())
+            .then(result => {
+                alert(result.message);
+                if (result.success) {
+                    window.location.reload();
+                }
+            })
+            .catch(error => alert('Error: ' + error));
+        }
+
         document.getElementById('catalogForm').addEventListener('submit', function(e) {
             e.preventDefault();
             const formData = new FormData(this);

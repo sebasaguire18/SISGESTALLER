@@ -95,8 +95,12 @@ while ($row = mysqli_fetch_assoc($result_catalog)) {
 $query_items = "SELECT * FROM orden_items WHERE ot_id = '$ot_id' ORDER BY id";
 $result_items = mysqli_query($conexion, $query_items);
 $items = [];
+$total = 0;
 while ($row = mysqli_fetch_assoc($result_items)) {
     $items[] = $row;
+    if ($row['precio'] && $row['cantidad']) {
+        $total += $row['precio'] * $row['cantidad'];
+    }
 }
 
 ?>
@@ -110,7 +114,7 @@ while ($row = mysqli_fetch_assoc($result_items)) {
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 </head>
-<body class="min-h-screen bg-gray-100" x-data="{ modalExtra:false, modalCatalog:false }">
+<body class="min-h-screen bg-gray-100" x-data="{ modalExtra:false, modalCatalog:false, search:'' }">
     <header class="bg-white shadow-sm p-4">
         <div class="max-w-5xl mx-auto flex justify-between items-center">
             <h1 class="text-xl font-bold">Detalle orden #<?php echo htmlspecialchars($ot_id); ?></h1>
@@ -183,6 +187,13 @@ while ($row = mysqli_fetch_assoc($result_items)) {
                                 </td>
                             </tr>
                         <?php endforeach; ?>
+                        <?php if (count($items) > 0): ?>
+                        <tr class="bg-gray-100 font-bold">
+                            <td colspan="5" class="p-2 border text-right">Total:</td>
+                            <td class="p-2 border text-right"><?php echo number_format($total, 2); ?></td>
+                            <td class="p-2 border"></td>
+                        </tr>
+                        <?php endif; ?>
                     </tbody>
                 </table>
             </div>
@@ -214,13 +225,16 @@ while ($row = mysqli_fetch_assoc($result_items)) {
 
     <!-- Modal Catalog -->
     <div x-show="modalCatalog" x-transition class="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-        <div class="bg-white rounded-lg shadow-lg w-full max-w-4xl p-5 max-h-96 overflow-y-auto">
+        <div class="bg-white rounded-lg shadow-lg w-full max-w-4xl p-5 max-h-[768px] overflow-y-auto">
             <div class="flex justify-between items-center mb-4 sticky top-0 bg-white">
                 <h3 class="text-lg font-semibold">Agregar productos y servicios</h3>
                 <button @click="modalCatalog=false" class="text-gray-500 hover:text-gray-700"><i class="bi bi-x-lg"></i></button>
             </div>
             <form id="catalogForm">
                 <input type="hidden" name="ot_id" value="<?php echo htmlspecialchars($ot_id); ?>">
+                <div class="mb-4">
+                    <input x-model="search" type="text" placeholder="Buscar por referencia o nombre..." class="w-full p-2 border rounded-sm">
+                </div>
                 <?php if (count($catalogo)): ?>
                     <div class="overflow-x-auto mb-4">
                         <table class="w-full text-sm border-collapse">
@@ -235,7 +249,7 @@ while ($row = mysqli_fetch_assoc($result_items)) {
                             </thead>
                             <tbody class="divide-y">
                                 <?php foreach ($catalogo as $idx => $item): ?>
-                                    <tr>
+                                    <tr x-show="!search || '<?php echo htmlspecialchars(strtolower($item['nombre'])); ?>'.includes(search.toLowerCase()) || '<?php echo htmlspecialchars(strtolower($item['referencia_bodega'])); ?>'.includes(search.toLowerCase())">
                                         <td class="p-2 border font-semibold"><?php echo htmlspecialchars($item['referencia_bodega']); ?></td>
                                         <td class="p-2 border"><?php echo htmlspecialchars($item['nombre'] . ' (' . $item['tipo'] . ')'); ?></td>
                                         <td class="p-2 border text-right"><?php echo $item['precio'] !== null ? number_format($item['precio'], 2) : '-'; ?></td>
